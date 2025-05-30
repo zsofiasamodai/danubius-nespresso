@@ -1,7 +1,7 @@
-import React from 'react';
+
 import { CoffeeIcon } from 'lucide-react';
 import { OrderProvider } from './context/OrderContext';
-import NewOrderPage from './pages/NewOrderPage';
+import OrderOverview from './pages/OrderOverview';
 
 function App() {
   return (
@@ -22,7 +22,7 @@ function App() {
         </header>
         
         <main>
-          <NewOrderPage />
+          <OrderOverview />
         </main>
         
         <footer className="bg-gray-100 border-t border-gray-200 mt-8">
