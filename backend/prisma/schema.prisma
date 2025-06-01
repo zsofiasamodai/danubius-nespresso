@@ -8,10 +8,4 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Order {
-  id        String   @id @default(uuid())
-  employees Json
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@map("orders")
 }
