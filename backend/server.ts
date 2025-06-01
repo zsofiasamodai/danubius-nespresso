@@ -2,7 +2,9 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { createOrder } from './BusinessLogic/OrderService';
-import { supabase } from './database/supabase';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 type EmployeeOrder = {
   employeeName: string;
@@ -23,13 +25,12 @@ app.use(bodyParser.json());
 // Get all orders
 app.get('/api/orders', async (_req: Request, res: Response) => {
   try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    res.json(data);
+    const orders = await prisma.order.findMany({
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    res.json(orders);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
@@ -39,14 +40,12 @@ app.get('/api/orders', async (_req: Request, res: Response) => {
 app.post('/api/orders', async (req: Request, res: Response) => {
   try {
     const order = createOrder(req);
-    const { data, error } = await supabase
-      .from('orders')
-      .insert([order])
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.status(201).json(data);
+    const newOrder = await prisma.order.create({
+      data: {
+        employees: order.employees
+      }
+    });
+    res.status(201).json(newOrder);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create order' });
   }
@@ -56,21 +55,19 @@ app.post('/api/orders', async (req: Request, res: Response) => {
 app.put('/api/orders/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { data, error } = await supabase
-      .from('orders')
-      .update(req.body)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    if (!data) {
-      res.status(404).json({ error: 'Order not found' });
-      return;
-    }
-    res.status(200).json(data);
+    const updatedOrder = await prisma.order.update({
+      where: { id },
+      data: {
+        employees: req.body.employees
+      }
+    });
+    res.status(200).json(updatedOrder);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update order' });
+    if (error.code === 'P2025') {
+      res.status(404).json({ error: 'Order not found' });
+    } else {
+      res.status(500).json({ error: 'Failed to update order' });
+    }
   }
 });
 
