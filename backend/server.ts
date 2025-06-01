@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { createOrder } from './BusinessLogic/OrderService';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -63,7 +63,7 @@ app.put('/api/orders/:id', async (req: Request, res: Response) => {
     });
     res.status(200).json(updatedOrder);
   } catch (error) {
-    if (error.code === 'P2025') {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       res.status(404).json({ error: 'Order not found' });
     } else {
       res.status(500).json({ error: 'Failed to update order' });
