@@ -2,9 +2,6 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { createOrder } from './BusinessLogic/OrderService';
-import { PrismaClient, Prisma } from '@prisma/client';
-
-const prisma = new PrismaClient();
 
 type EmployeeOrder = {
   employeeName: string;
@@ -19,55 +16,41 @@ export type Order = {
 const app = express();
 const PORT = 4000;
 
+// In-memory "database"
+let orders: Order[] = [];
+
 app.use(cors());
 app.use(bodyParser.json());
 
 // Get all orders
-app.get('/api/orders', async (_req: Request, res: Response) => {
-  try {
-    const orders = await prisma.order.findMany({
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-    res.json(orders);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch orders' });
-  }
+app.get('/api/orders', (_req: Request, res: Response) => {
+  res.json(orders);
 });
 
 // Create a new order
-app.post('/api/orders', async (req: Request, res: Response) => {
+app.post('/api/orders', (req: Request, res: Response) => {
   try {
     const order = createOrder(req);
-    const newOrder = await prisma.order.create({
-      data: {
-        employees: order.employees
-      }n
-    });
-    res.status(201).json(newOrder);
+    orders.push(order);
+    res.status(201).json(order);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create order' });
   }
 });
 
 // Update an order
-app.put('/api/orders/:id', async (req: Request, res: Response) => {
+app.put('/api/orders/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updatedOrder = await prisma.order.update({
-      where: { id },
-      data: {
-        employees: req.body.employees
-      }
-    });
-    res.status(200).json(updatedOrder);
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+    const idx = orders.findIndex(o => o.id === id);
+    if (idx === -1) {
       res.status(404).json({ error: 'Order not found' });
-    } else {
-      res.status(500).json({ error: 'Failed to update order' });
+      return;
     }
+    orders[idx] = { ...req.body, id };
+    res.status(200).json(orders[idx]);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update order' });
   }
 });
 
