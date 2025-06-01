@@ -1,13 +1,14 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import { createOrder } from './BusinessLogic/OrderService';
 
 type EmployeeOrder = {
   employeeName: string;
   coffeeQuantity: number;
 };
 
-type Order = {
+export type Order = {
   id: string;
   employees: EmployeeOrder[];
 };
@@ -43,7 +44,7 @@ app.get('/api/orders', (_req: Request, res: Response) => {
 
 // Create a new order
 app.post('/api/orders', (req: Request, res: Response) => {
-  const order: Order = { ...req.body, id: Date.now().toString() };
+ const order = createOrder(req);
   orders.push(order);
   res.status(201).json(order);
 });
