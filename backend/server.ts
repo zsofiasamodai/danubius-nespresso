@@ -43,7 +43,7 @@ app.post('/api/orders', async (req: Request, res: Response) => {
     const newOrder = await prisma.order.create({
       data: {
         employees: order.employees
-      }
+      }n
     });
     res.status(201).json(newOrder);
   } catch (error) {
