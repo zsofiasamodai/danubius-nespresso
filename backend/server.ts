@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { createOrder } from './BusinessLogic/OrderService';
+import { supabase } from './database/supabase';
 
 type EmployeeOrder = {
   employeeName: string;
@@ -16,50 +17,63 @@ export type Order = {
 const app = express();
 const PORT = 4000;
 
-// In-memory "database"
-let orders: Order[] = [
-    {
-        id: '1',
-        employees: [
-        { employeeName: 'Alice', coffeeQuantity: 5 },
-        { employeeName: 'Bob', coffeeQuantity: 3 }
-        ]
-    },
-    {
-        id: '2',
-        employees: [
-        { employeeName: 'Charlie', coffeeQuantity: 2 }
-        ]
-    } 
-];
-
-
 app.use(cors());
 app.use(bodyParser.json());
 
 // Get all orders
-app.get('/api/orders', (_req: Request, res: Response) => {
-  res.json(orders);
+app.get('/api/orders', async (_req: Request, res: Response) => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
 });
 
 // Create a new order
-app.post('/api/orders', (req: Request, res: Response) => {
- const order = createOrder(req);
-  orders.push(order);
-  res.status(201).json(order);
+app.post('/api/orders', async (req: Request, res: Response) => {
+  try {
+    const order = createOrder(req);
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([order])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create order' });
+  }
 });
 
 // Update an order
-app.put('/api/orders/:id', (req: Request, res: Response) => {
-  const { id } = req.params;
-  const idx = orders.findIndex(o => o.id === id);
-  if (idx === -1) {
-    res.status(404).json({ error: 'Order not found' });
-    return;
+app.put('/api/orders/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('orders')
+      .update(req.body)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) {
+      res.status(404).json({ error: 'Order not found' });
+      return;
+    }
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update order' });
   }
-  orders[idx] = { ...req.body, id };
-  res.status(200).json(orders[idx]);
 });
+
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);
 });
